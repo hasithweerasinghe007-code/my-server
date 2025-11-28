@@ -98,6 +98,13 @@ io.on("connection", (socket) => {
             io.to(clientObj.socketId).emit("read_file", { path: filePath });
         });
 
+        // Dashboard -> upload local file to remote directory
+        socket.on("upload_remote_file", ({ nodeId, path: dirPath, name, contentBase64 }) => {
+            const clientObj = clients[nodeId];
+            if (!clientObj || !clientObj.socketId || !name || !contentBase64) return;
+            io.to(clientObj.socketId).emit("write_file", { path: dirPath || "", name, contentBase64 });
+        });
+
         socket.on("disconnect", () => {
             dashboardSockets.delete(socket);
         });
@@ -300,6 +307,24 @@ io.on("connection", (socket) => {
                 name,
                 size,
                 contentBase64,
+                error: error || null
+            });
+        });
+    });
+
+    // Client PC -> write/upload result
+    socket.on("write_result", (payload) => {
+        const nodeId = payload.nodeId || Object.keys(clients).find(key => clients[key].socketId === socket.id);
+        if (!nodeId) return;
+
+        const { path: targetPath, name, success, error } = payload;
+
+        dashboardSockets.forEach(dash => {
+            dash.emit("upload_result", {
+                client: nodeId,
+                path: targetPath,
+                name,
+                success: !!success,
                 error: error || null
             });
         });
