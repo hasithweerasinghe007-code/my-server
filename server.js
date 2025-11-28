@@ -45,7 +45,6 @@ io.on("connection", (socket) => {
 
         socket.on("get_screenshots", (nodeId) => {
             const clientObj = clients[nodeId];
-            console.log(nodeId)
             if(clientObj && clientObj.socketId) {
                 io.to(clientObj.socketId).emit("getScreenshots");
             }
@@ -179,7 +178,6 @@ io.on("connection", (socket) => {
             if (!img || !img.base64) return;
             // Send as data URL so we don't rely on filesystem logs
             const url = `data:image/jpeg;base64,${img.base64}`;
-            console.log(url)
             dashboardSockets.forEach(dash => {
                 dash.emit("screenshot", {
                     client: nodeId,
