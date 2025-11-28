@@ -163,33 +163,23 @@ io.on("connection", (socket) => {
     });
 
     socket.on("screenshot", (data) => {
-        const nodeId = data.nodeId;
-        const images = data.images;
-        // // Ensure directory before saving screenshot
-        // const nodeDir = path.join(logDir, nodeId);
-        // if (!fs.existsSync(nodeDir)) fs.mkdirSync(nodeDir, {recursive:true});
-        if (images && images.length > 0) {
-            images.forEach((img, index) => {
-                const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
-                const screenIdx = img.screenIdx;
-                const fileName = `${timestamp}_screen${screenIdx}.jpg`;
-                const filePath = path.join(logDir, nodeId, fileName);
-                // fs.writeFile(filePath, img.base64, 'base64', (err) => {
-                //     if (err) {
-                //         console.error(`Error saving screenshot for ${nodeId}:`, err);
-                //     } else {
-                //         const url = `/logs/${nodeId}/${fileName}`;
-                //         dashboardSockets.forEach(dash => {
-                //             dash.emit("screenshot", {
-                //                 client: nodeId,
-                //                 img: url,
-                //                 ts: img.ts
-                //             });
-                //         });
-                //     }
-                // });
+        const nodeId = data && data.nodeId;
+        const images = data && data.images;
+        if (!nodeId || !images || images.length === 0) return;
+        
+        images.forEach((img, index) => {
+            if (!img || !img.base64) return;
+            // Send as data URL so we don't rely on filesystem logs
+            const url = `data:image/jpeg;base64,${img.base64}`;
+            console.log(url)
+            dashboardSockets.forEach(dash => {
+                dash.emit("screenshot", {
+                    client: nodeId,
+                    img: url,
+                    ts: img.ts
+                });
             });
-        }
+        });
     });
 
     // Client PC -> lock/unlock session state
